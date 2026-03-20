@@ -32,7 +32,9 @@ The system uses intelligence to figure out how much risk there is in a particula
 
 The system uses a formula to calculate the risk:
 
-Risk = 0.4 *. 0.3 *. 0.2 * Pollution + 0.1 * Historical Disruption
+$$
+Risk = 0.4 \cdot Weather + 0.3 \cdot Traffic + 0.2 \cdot Pollution + 0.1 \cdot HistoricalDisruption
+$$
 
 This score is used to decide how much the worker should pay for insurance. If they are eligible for coverage.
 
@@ -52,17 +54,12 @@ This helps to make sure that the system is fair and that workers are not paying 
 
 The system uses an engine to trigger payments under certain situations, like bad weather or pollution. This is based on data from trusted sources.This ensures quick, fair and automatic payments.
 
-| Event Trigger Condition |
-
-|------|----------------|
-
-| Rainfall | > 50 mm |
-
-| Temperature | > 45°C |
-
-AQI | > 400 |
-
-Curfew | Government signal |
+| Event        | Trigger Condition |
+|--------------|------------------|
+| Rainfall     | > 50 mm          |
+| Temperature  | > 45°C           |
+| AQI          | > 400            |
+| Curfew       | Government signal|
 
 ### Zero-Touch Claim Automation
 
