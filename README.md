@@ -104,4 +104,4 @@ You can find the GitHub repository, for GigShield AI at https://github.com/aniki
 
 ## Demo Video
 
-You can watch a demo video of GigShield AI at 
+You can watch a demo video of GigShield AI at https://youtu.be/S9LRcXHFhTE.
