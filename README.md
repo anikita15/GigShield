@@ -65,7 +65,131 @@ The system uses an engine to trigger payments under certain situations, like bad
 
 When the system detects that a payment should be made it takes care of everything automatically. This includes checking the worker's eligibility and looking for signs of cheating while making the payment.
 
-### Adversarial Fraud Detection System
+## Adversarial Defense & Anti-Spoofing Strategy
+
+GigShield AI is designed with a **zero-trust, multi-signal verification architecture** to defend against GPS spoofing and coordinated fraud attacks while ensuring fairness for genuine workers.
+
+---
+
+### 1. Differentiation: Genuine Worker vs Bad Actor
+
+Our system does not rely on GPS alone. Instead, it differentiates users based on **behavioral consistency and contextual validation**.
+
+#### Key Logic:
+
+- A **genuine worker** shows:
+  - consistent delivery activity over time  
+  - realistic movement patterns  
+  - gradual location changes  
+  - regular working hours  
+
+- A **fraudulent user** often shows:
+  - sudden activity only during disruption events  
+  - static or unrealistic location jumps  
+  - no historical delivery behavior  
+  - multiple claims in short time  
+
+#### Decision Mechanism:
+
+Each claim is assigned a **Fraud Risk Score (0–1)**:
+
+| Score Range | Action            |
+|-------------|-------------------|
+| 0 – 0.3     | Auto-approved     |
+| 0.3 – 0.7   | Soft verification |
+| 0.7 – 1.0   | Flagged / blocked |
+
+---
+
+### 2. Data: Multi-Signal Fraud Detection
+
+To detect spoofing and fraud rings, GigShield analyzes multiple data points beyond GPS:
+
+#### Location Intelligence
+- GPS coordinates  
+- IP address geolocation  
+- network region / ISP patterns  
+
+#### Behavioral Data
+- delivery frequency  
+- active working hours  
+- session duration  
+- historical consistency  
+
+#### Activity Verification
+- recent deliveries (last 24–48 hrs)  
+- app usage patterns  
+- login timestamps  
+
+#### Device Fingerprinting
+- device ID  
+- browser fingerprint  
+- OS / device metadata  
+
+#### Network-Level Signals (Fraud Ring Detection)
+- shared IP clusters  
+- simultaneous claims  
+- identical device patterns  
+- synchronized activity timing  
+
+#### Detection Insight:
+
+Fraud rings are identified using **clustering and graph-based analysis**, where multiple suspicious users form a connected pattern.
+
+---
+
+### 3. UX Balance: Fairness for Honest Workers
+
+GigShield ensures that fraud detection does not negatively impact genuine users.
+
+#### Soft Verification Workflow
+
+Instead of immediate rejection:
+
+- claims are marked as **“Under Review”**  
+- additional validation checks are applied  
+- payout may be delayed but not denied  
+
+---
+
+#### Trust Score System
+
+Each user is assigned a **Trust Score** based on:
+
+- historical activity  
+- consistency  
+- past claim behavior  
+
+High-trust users receive:
+
+- faster approvals  
+- minimal friction  
+
+---
+
+#### Network Failure Handling
+
+In case of genuine issues (e.g., poor connectivity during bad weather):
+
+- temporary data gaps are tolerated  
+- historical behavior is prioritized  
+- fallback validation methods are used  
+
+---
+
+### Outcome
+
+This architecture ensures:
+
+- accurate detection of GPS spoofing  
+- identification of coordinated fraud rings  
+- minimal false positives  
+- fair treatment of genuine workers  
+- long-term system sustainability  
+
+---
+
+> “We don’t just verify claims — we verify reality using multiple independent signals.”
 
 The system has a layer to detect and prevent cheating. This includes checking the workers location looking at their behavior over time and making sure that they are not exploting the system.
 
@@ -74,6 +198,35 @@ Each claim is given a score based on how it is to be fake. If the score is high 
 ## How we built it
 
 The tools and technologies that are going to be used to build GigShield AI include React, Tailwind CSS, Node.js, Express.js, MongoDB, Python Scikit-learn and OpenWeatherMap API.
+
+### System Architecture  
+---
+
+### AI/ML Components  
+
+- Risk Prediction Model → Logistic Regression / Random Forest  
+- Fraud Detection Model → Isolation Forest  
+- Cluster Detection → K-Means / DBSCAN  
+
+---
+
+###  External Data Sources  
+
+- Weather API (OpenWeatherMap)  
+- AQI API  
+- Mock Traffic APIs  
+
+---
+
+### Tech Stack  
+
+**Frontend:** React.js, Tailwind CSS  
+**Backend:** Node.js, Express.js  
+**Database:** MongoDB  
+**AI/ML:** Python, Scikit-learn, Pandas  
+**Payments:** Razorpay Sandbox  
+**Deployment:** Vercel / Render  
+
 
 ## Challenges we ran into
 
@@ -95,9 +248,6 @@ We have plans for GigShield AI. These include integrating with gig platforms usi
 
 GigShield AI was built using a variety of tools and technologies. These include React, Tailwind CSS, Node.js, Express.js, MongoDB, Python, Scikit-learn, OpenWeatherMap API and Razorpay Sandbox.
 
-## Try It Out
-
-You can try out GigShield AI for yourself at 
 
 ## GitHub Repository
 You can find the GitHub repository, for GigShield AI at https://github.com/anikita15/GigShield.git.
