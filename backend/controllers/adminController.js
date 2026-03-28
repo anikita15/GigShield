@@ -66,6 +66,13 @@ exports.overrideRiskScore = async (req, res, next) => {
     const { userId } = req.params;
     const { newScore, reason } = req.body;
 
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      const err = new Error('A valid ObjectId is required for userId');
+      err.statusCode = 400;
+      throw err;
+    }
+
     if (newScore === undefined || typeof newScore !== 'number' || newScore < 0 || newScore > 100) {
       const err = new Error('A valid newScore between 0 and 100 is required');
       err.statusCode = 400;

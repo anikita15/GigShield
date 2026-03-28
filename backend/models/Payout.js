@@ -9,6 +9,7 @@ const PayoutSchema = new mongoose.Schema({
     default: 'pending',
   },
   triggerType: { type: String },
+  idempotencyKey: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payout', PayoutSchema);

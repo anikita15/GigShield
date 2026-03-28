@@ -64,11 +64,29 @@ exports.getUserActivities = async (req, res, next) => {
       throw err;
     }
 
+    // Advanced: Add pagination to protect memory
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const skip = (page - 1) * limit;
+
+    const total = await ActivityLog.countDocuments({ userId });
+    
     const logs = await ActivityLog.find({ userId })
       .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
       .exec();
 
-    res.json({ success: true, count: logs.length, data: logs });
+    res.json({ 
+      success: true, 
+      count: logs.length, 
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      },
+      data: logs 
+    });
   } catch (err) {
     next(err);
   }
@@ -89,7 +107,7 @@ exports.bulkCreateActivity = async (req, res, next) => {
     }
 
     const validatedActivities = activities.map(item => {
-      const { userId, location, deliveriesCompleted } = item;
+      const { userId, location, deliveriesCompleted, timestamp } = item;
 
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         throw new Error(`userId must be a valid ObjectId for all items`);
@@ -103,7 +121,16 @@ exports.bulkCreateActivity = async (req, res, next) => {
         }
       }
 
-      return { userId, location, deliveriesCompleted };
+      // Check ISO format validity if timestamp is provided
+      let validTimestamp = Date.now();
+      if (timestamp) {
+        validTimestamp = new Date(timestamp);
+        if (isNaN(validTimestamp.getTime())) {
+          throw new Error('timestamp must be a valid ISO Date string');
+        }
+      }
+
+      return { userId, location, deliveriesCompleted, timestamp: validTimestamp };
     });
 
     const inserted = await ActivityLog.insertMany(validatedActivities);

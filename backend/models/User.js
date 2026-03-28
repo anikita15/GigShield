@@ -6,6 +6,8 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String, required: true, unique: true },
   trustScore: { type: Number, default: 0.5 },
   role: { type: String, enum: ['worker', 'admin'], default: 'worker' },
+  otp: { type: String },
+  otpExpiresAt: { type: Date },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

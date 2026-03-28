@@ -34,11 +34,25 @@ exports.initiatePayout = async (req, res, next) => {
       throw err;
     }
 
+    // Idempotency: Prevent duplicate payouts from duplicate webhook triggers
+    const { idempotencyKey } = req.body;
+    if (idempotencyKey) {
+      const duplicate = await Payout.findOne({ idempotencyKey });
+      if (duplicate) {
+         return res.status(200).json({ 
+           success: true, 
+           message: 'Idempotency key matched. Payout already processing', 
+           data: duplicate 
+         });
+      }
+    }
+
     const payout = await Payout.create({
       userId,
       amount,
       triggerType: triggerType || 'manual',
       status: 'pending',
+      idempotencyKey
     });
 
     res.status(201).json({ success: true, data: payout });

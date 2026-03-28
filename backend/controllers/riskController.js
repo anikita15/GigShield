@@ -42,6 +42,13 @@ exports.computeRiskScore = async (req, res, next) => {
     }
 
     const { risk_score } = mlResult;
+    
+    // Explicitly validate ML output
+    if (typeof risk_score !== 'number') {
+      const err = new Error('ML returned an invalid payload missing risk_score');
+      err.statusCode = 502;
+      throw err;
+    }
 
     // 4. Store result with full auditable factors
     const riskRecord = await RiskScore.create({
