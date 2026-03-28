@@ -74,3 +74,43 @@ exports.getUserActivities = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc   Create multiple activity logs (Bulk Ingest)
+ * @route  POST /api/activity/bulk
+ */
+exports.bulkCreateActivity = async (req, res, next) => {
+  try {
+    const { activities } = req.body;
+
+    if (!Array.isArray(activities) || activities.length === 0) {
+      const err = new Error('activities must be a non-empty array');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const validatedActivities = activities.map(item => {
+      const { userId, location, deliveriesCompleted } = item;
+
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+        throw new Error(`userId must be a valid ObjectId for all items`);
+      }
+      if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+        throw new Error('location with numeric lat and lng is required for all items');
+      }
+      if (deliveriesCompleted !== undefined) {
+        if (typeof deliveriesCompleted !== 'number' || deliveriesCompleted < 0) {
+          throw new Error('deliveriesCompleted must be a positive number if provided');
+        }
+      }
+
+      return { userId, location, deliveriesCompleted };
+    });
+
+    const inserted = await ActivityLog.insertMany(validatedActivities);
+
+    res.status(201).json({ success: true, count: inserted.length, data: inserted });
+  } catch (err) {
+    if (!err.statusCode) err.statusCode = 400; // Map mapping throw to 400
+    next(err);
+  }
+};
