@@ -17,7 +17,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 
 FEATURE_COLUMNS = ["weather", "traffic", "pollution", "history", "isNewUser"]
 MODEL_OUT = os.path.join(os.path.dirname(__file__), '..', 'models', 'risk_model.joblib')
@@ -55,7 +55,7 @@ def generate_training_data(n_samples: int = 5000):
 
 
 def train():
-    print("📊 Generating synthetic training data...")
+    print("Generating synthetic training data...")
     X, y = generate_training_data()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -70,16 +70,16 @@ def train():
         ))
     ])
 
-    print("🤖 Training GradientBoostingRegressor...")
+    print("Training GradientBoostingRegressor...")
     pipeline.fit(X_train, y_train)
 
     y_pred = pipeline.predict(X_test)
-    rmse = mean_squared_error(y_test, y_pred, squared=False)
-    print(f"✅ Training complete. Test RMSE: {rmse:.4f}")
+    rmse = root_mean_squared_error(y_test, y_pred)
+    print(f"Training complete. Test RMSE: {rmse:.4f}")
 
     os.makedirs(os.path.dirname(MODEL_OUT), exist_ok=True)
     joblib.dump(pipeline, MODEL_OUT)
-    print(f"💾 Model saved to: {MODEL_OUT}")
+    print(f"Model saved to: {MODEL_OUT}")
 
 
 if __name__ == "__main__":

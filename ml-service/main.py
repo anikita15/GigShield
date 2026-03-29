@@ -25,19 +25,25 @@ from config import HOST, PORT
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load the ML model into memory when the server starts."""
+    global _model_loaded
     try:
         load_model()
+        from utils.predictor import _model
+        _model_loaded = _model is not None
     except FileNotFoundError as e:
-        print(f"⚠️  WARNING: {e}")
+        print(f"WARNING: {e}")
         print("   The service will start but /risk-score will return 503 until model is trained.")
+        _model_loaded = False
     yield
     # Cleanup on shutdown (if needed)
-    print("🛑 ML Service shutting down.")
+    print("ML Service shutting down.")
 
 
 # ─────────────────────────────────────────────
 # App
 # ─────────────────────────────────────────────
+_model_loaded = False
+
 app = FastAPI(
     title="GigShield AI — ML Risk Scoring Service",
     description="Predicts parametric risk scores for gig workers based on environmental and activity features.",
@@ -51,22 +57,6 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-
-
-# ─────────────────────────────────────────────
-# Health Check
-# ─────────────────────────────────────────────
-_model_loaded = False
-
-@app.on_event("startup")
-async def set_model_flag():
-    """Track whether the model loaded successfully."""
-    global _model_loaded
-    try:
-        from utils.predictor import _model
-        _model_loaded = _model is not None
-    except Exception:
-        _model_loaded = False
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

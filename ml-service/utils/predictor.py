@@ -22,7 +22,7 @@ def load_model():
             "Run 'python pipeline/train_model.py' first."
         )
     _model = joblib.load(model_path)
-    print(f"✅ Model loaded from {model_path}")
+    print(f"Model loaded from {model_path}")
 
 
 def predict_risk(features: dict) -> float:

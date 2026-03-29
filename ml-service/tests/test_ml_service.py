@@ -81,7 +81,7 @@ def test_risk_score_success():
     """Returns risk_score in [0, 1] on valid input with loaded model."""
     mock_model = MagicMock()
     with patch("utils.predictor._model", mock_model):
-        with patch("utils.predictor.predict_risk", return_value=0.4231) as mock_predict:
+        with patch("main.predict_risk", return_value=0.4231) as mock_predict:
             response = client.post("/risk-score", json=VALID_PAYLOAD)
 
     assert response.status_code == 200
@@ -94,7 +94,7 @@ def test_risk_score_success():
 def test_risk_score_clamped():
     """Even if model returns >1, response is clamped to 1.0."""
     with patch("utils.predictor._model", MagicMock()):
-        with patch("utils.predictor.predict_risk", return_value=1.0):
+        with patch("main.predict_risk", return_value=1.0):
             response = client.post("/risk-score", json=VALID_PAYLOAD)
     assert response.status_code == 200
     assert response.json()["risk_score"] <= 1.0
@@ -104,7 +104,7 @@ def test_risk_score_new_user():
     """New users (isNewUser=True, history=0) should compute correctly."""
     payload = {**VALID_PAYLOAD, "history": 0, "isNewUser": True}
     with patch("utils.predictor._model", MagicMock()):
-        with patch("utils.predictor.predict_risk", return_value=0.75):
+        with patch("main.predict_risk", return_value=0.75):
             response = client.post("/risk-score", json=payload)
     assert response.status_code == 200
     assert response.json()["risk_score"] == 0.75

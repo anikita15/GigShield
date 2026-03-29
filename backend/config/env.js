@@ -18,4 +18,5 @@ module.exports = {
   MONGO_URI: process.env.MONGO_URI || '',
   JWT_SECRET: process.env.JWT_SECRET || 'dev-insecure-secret',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  INTERNAL_API_KEY: process.env.INTERNAL_API_KEY || 'gigshield_internal_dev_key_2024',
 };

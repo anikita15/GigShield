@@ -1,11 +1,28 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { JWT_SECRET } = require('../config/env');
+const { JWT_SECRET, INTERNAL_API_KEY } = require('../config/env');
 
 /**
- * Middleware to protect routes that require authentication
+ * Middleware to protect routes that require authentication.
+ * Supports two auth methods:
+ *   1. Bearer JWT token (for users/admins)
+ *   2. x-internal-api-key header (for trigger-engine service calls)
  */
 const protect = async (req, res, next) => {
+  // ── Internal Service Auth (Trigger Engine) ──
+  const internalKey = req.headers['x-internal-api-key'];
+  if (internalKey) {
+    if (internalKey !== INTERNAL_API_KEY) {
+      const err = new Error('Invalid internal API key');
+      err.statusCode = 401;
+      return next(err);
+    }
+    // Mark request as system-level; set a synthetic user object
+    req.user = { id: 'system', role: 'admin', isSystem: true };
+    return next();
+  }
+
+  // ── Standard JWT Auth ──
   let token;
 
   if (
@@ -13,13 +30,9 @@ const protect = async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Get user from the token and attach to req
       req.user = await User.findById(decoded.id).select('-password');
 
       if (!req.user) {
@@ -30,13 +43,12 @@ const protect = async (req, res, next) => {
 
       next();
     } catch (err) {
-      console.error('🛑 Token verification failed:', err);
+      console.error('Token verification failed:', err.message);
       const error = new Error('Not authorized, token failed');
       error.statusCode = 401;
-      return next(error);   // ← return prevents fall-through to else block
+      return next(error);
     }
   } else {
-    // No Authorization header at all
     const err = new Error('Not authorized, no token');
     err.statusCode = 401;
     return next(err);
@@ -49,8 +61,12 @@ const protect = async (req, res, next) => {
  */
 const checkRole = (...roles) => {
   return (req, res, next) => {
+    // System-level requests always pass role checks
+    if (req.user && req.user.isSystem) {
+      return next();
+    }
     if (!req.user || !roles.includes(req.user.role)) {
-      const err = new Error(`User role ${req.user.role} is not authorized to access this route`);
+      const err = new Error(`User role ${req.user ? req.user.role : 'unknown'} is not authorized to access this route`);
       err.statusCode = 403;
       return next(err);
     }
