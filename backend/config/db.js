@@ -11,9 +11,12 @@ let mongoServer;
 
 const connectDB = async () => {
   try {
+    // Mask the password part of the URI for safe logging
+    // Replaces the part between : and @ with ****
+    const maskedUri = MONGO_URI ? MONGO_URI.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@') : 'MISSING';
+    console.log(`📡 Attempting connection: ${maskedUri}`);
+    
     // 1. Attempt connection with provided URI
-    const maskedUri = MONGO_URI ? `${MONGO_URI.substring(0, 15)}...${MONGO_URI.substring(MONGO_URI.length - 10)}` : 'MISSING';
-    console.log(`📡 Connecting to MongoDB: ${maskedUri}`);
     await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 2000 });
     console.log('✅ MongoDB connected');
   } catch (err) {
