@@ -106,9 +106,13 @@ exports.fireEngine = async (req, res, next) => {
            const userId = u._id.toString();
            const isEligible = evaluationResults.find(e => e.userId === userId);
 
-           // Fraud Tracking
+           // Deep Diagnostic for Explainability Matrix
+           const latestRisk = await RiskScore.findOne({ userId: u._id }).sort({ createdAt: -1 }).lean();
            const activeFraud = await FraudFlag.findOne({ userId: u._id, status: { $in: ['open', 'investigating'] }}).lean();
-           // Suspicious Pattern Tracking (Just for Demo Explainability output: low activity + high trust = suspicious)
+           
+           // Cooldown check (matches evaluator.js)
+           const cooldownLimit = new Date(now.getTime() - (parseInt(process.env.PAYOUT_COOLDOWN_MS) || 86400000));
+           const recentPayout = await Payout.findOne({ userId: u._id, createdAt: { $gte: cooldownLimit } }).lean();
            
            if (isEligible) {
                // Legit / High Risk User logic
@@ -119,10 +123,9 @@ exports.fireEngine = async (req, res, next) => {
                    status: "Approved",
                    confidenceScore: 0.96,
                    amount: 500,
-                   explainability: "Approved because consistent delivery history and realistic movement paths sync perfectly with external hazard markers."
+                   explainability: "Approved. Consistent delivery history and location telemetry sync perfectly with external hazard markers."
                });
                financialMetrics.totalPayouts += 500;
-               // Actually create payout (idempotency guard prevents duplicates)
                if (!existingPayout) {
                  await Payout.create({ userId: u._id, amount: 500, status: 'paid', triggerType: 'demo_auto', idempotencyKey: iKey });
                }
@@ -134,27 +137,41 @@ exports.fireEngine = async (req, res, next) => {
                        status: "Blocked",
                        confidenceScore: 0.99,
                        amount: 0,
-                       explainability: "Blocked due to impossible location telemetry (Delhi to Mumbai in 5 mins). Flagged as malicious actor."
+                       explainability: "Blocked due to impossible location telemetry (Delhi to Mumbai in 5 mins). Malicious behavior pattern detected."
                    });
                    financialMetrics.fraudPreventedBase += 500;
+               } else if (recentPayout) {
+                    financialMetrics.actions.push({
+                        userId: u.name,
+                        status: "Hold",
+                        confidenceScore: 1.0,
+                        amount: 0,
+                        explainability: "Payout on hold. User received a recovery payout within the last 24 hours. Cooldown guard active."
+                    });
                } else if (u.trustScore < 0.5) {
-                   // Suspicious configuration
                    financialMetrics.actions.push({
                        userId: u.name,
                        status: "Under Review",
                        confidenceScore: 0.65,
                        amount: 0,
-                       explainability: "Held for manual review. User has critically low interval history (< 1 delivery). Not enough behavioral baseline to guarantee trust."
+                       explainability: "Held for manual review. Critically low activity history (< 1 delivery). Insufficient behavioral baseline."
                    });
-               } else {
-                    // Legit worker, just not in crisis
+               } else if (latestRisk && latestRisk.score < 0.5) {
                    financialMetrics.actions.push({
                        userId: u.name,
                        status: "Ignored",
                        confidenceScore: 1.0,
                        amount: 0,
-                       explainability: "Ignored. Risk score is perfectly stable, no hazard detected."
+                       explainability: "Ignored. Risk score is perfectly stable, no physical hazard detected in this zone."
                    });
+               } else {
+                    financialMetrics.actions.push({
+                        userId: u.name,
+                        status: "Processing",
+                        confidenceScore: 0.5,
+                        amount: 0,
+                        explainability: "System is verifying external markers. Please ensure hazard simulation is active."
+                    });
                }
            }
         }

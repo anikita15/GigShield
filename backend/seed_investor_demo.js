@@ -21,7 +21,7 @@ envContent.split('\n').forEach(line => {
   if (key) env[key] = value;
 });
 
-const MONGO_URI = env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || env.MONGO_URI;
 
 const User = require('../shared/models/User');
 const ActivityLog = require('../shared/models/ActivityLog');
