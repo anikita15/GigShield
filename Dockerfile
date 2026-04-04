@@ -35,7 +35,7 @@ RUN npm install --omit=dev
 COPY . .
 
 # 5. Populate Frontend Build
-RM -rf /usr/share/nginx/html/*
+RUN rm -rf /usr/share/nginx/html/*
 COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
 # 6. Configure Services
