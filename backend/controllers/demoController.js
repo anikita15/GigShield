@@ -35,7 +35,105 @@ const getSystemStateSnapshot = async () => {
     return snapshot;
 };
 
-const { seed, DEMO_USERS } = require('../seed_investor_demo.js');
+const mongoose = require('mongoose');
+
+// --- THE INVESTOR PERSONAS ---
+const DEMO_USERS = [
+  {
+    _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000001"),
+    name: "Shivam (Perfect Pilot)",
+    email: "shivam@gigshield.ai",
+    phone: "+919999999901",
+    trustScore: 0.99,
+    isPremium: true, tier: 'sentinel',
+    type: "legit",
+    otp: "123456",
+    otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000002"),
+    name: "High-Risk Node",
+    email: "risk@gigshield.ai",
+    phone: "+919876543202",
+    trustScore: 0.85,
+    isPremium: true, tier: 'sentinel',
+    type: "high-risk",
+    otp: "123456",
+    otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000003"),
+    name: "Suspicious Pattern",
+    email: "suspicious@gigshield.ai",
+    phone: "+919876543203",
+    trustScore: 0.40,
+    isPremium: true, tier: 'sentinel',
+    type: "suspicious",
+    otp: "123456",
+    otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000004"),
+    name: "Fraudulent Actor",
+    email: "fraud@gigshield.ai",
+    phone: "+919876543204",
+    trustScore: 0.10,
+    isPremium: true, tier: 'sentinel',
+    type: "fraud",
+    otp: "123456",
+    otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  }
+];
+
+// --- CORE STABILITY SEED LOGIC ---
+const seed = async () => {
+    try {
+        console.log("[STABILITY] Starting internal demo reset...");
+        const userIds = DEMO_USERS.map(u => u._id);
+        const userEmails = DEMO_USERS.map(u => u.email);
+        const userPhones = DEMO_USERS.map(u => u.phone);
+
+        // Aggressive cleanup (ID, Email, Phone) to prevent duplicate key errors
+        await User.deleteMany({ $or: [{ _id: { $in: userIds } }, { email: { $in: userEmails } }, { phone: { $in: userPhones } }] });
+        await ActivityLog.deleteMany({ userId: { $in: userIds } });
+        await RiskScore.deleteMany({ userId: { $in: userIds } });
+        await FraudFlag.deleteMany({ userId: { $in: userIds } });
+        await Payout.deleteMany({ userId: { $in: userIds } });
+
+        for (const uData of DEMO_USERS) {
+            const type = uData.type;
+            const uToCreate = { ...uData };
+            delete uToCreate.type;
+            await User.create(uToCreate);
+
+            // Seed Activity History (Legit nodes get consistent history)
+            const now = new Date();
+            if (type === 'legit' || type === 'high-risk') {
+                for (let i = 5; i > 0; i--) {
+                    await ActivityLog.create({
+                        userId: uData._id,
+                        location: { lat: 28.7041, lng: 77.1025 },
+                        deliveriesCompleted: 2,
+                        timestamp: new Date(now.getTime() - (i * 3600000))
+                    });
+                }
+            } else if (type === 'fraud') {
+                // Fraud impossible movement logs
+                await ActivityLog.create({ userId: uData._id, location: { lat: 28.7041, lng: 77.1025 }, deliveriesCompleted: 1, timestamp: new Date(now.getTime() - 600000) });
+                await ActivityLog.create({ userId: uData._id, location: { lat: 19.0760, lng: 72.8777 }, deliveriesCompleted: 1, timestamp: new Date(now.getTime() - 300000) });
+                await FraudFlag.create({ userId: uData._id, score: 0.99, reason: "Impossible telemetry detected (>500mph Delhi to Mumbai)", status: "open" });
+            }
+
+            // Initial Risk Baseline
+            await RiskScore.create({ userId: uData._id, score: 0.1, factors: { weather: 1, traffic: 1, pollution: 1 } });
+        }
+        console.log("[STABILITY] Environment successfully restored.");
+        return true;
+    } catch (err) {
+        console.error("[STABILITY ERROR] Reset failed:", err);
+        throw err;
+    }
+};
 
 // 1. Reset Demo State
 exports.resetDemoState = async (req, res, next) => {
