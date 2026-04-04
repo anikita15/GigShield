@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────
-# GigShield AI — Cloud-Native Monolith
+# GigShield AI — Unified Production Monolith
 # Optimized for Hugging Face Spaces (UID 1000)
 # ─────────────────────────────────────────────
 
@@ -19,31 +19,23 @@ RUN apk add --no-cache nginx supervisor
 
 WORKDIR /app
 
-# 1. Install Backend Dependencies
-COPY backend/package*.json ./backend/
-RUN cd backend && npm install --omit=dev
-
-# 2. Install Trigger Engine Dependencies
-COPY trigger-engine/package*.json ./trigger-engine/
-RUN cd trigger-engine && npm install --omit=dev
-
-# 3. Install Root Dependencies (shared modules)
+# 1. Install Unified Dependencies (Root)
+# Merged all backend, trigger-engine, and shared dependencies here
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# 4. Copy Source Code
+# 2. Copy All Source Code (Backend, Trigger, Shared)
 COPY . .
 
-# 5. Populate Frontend Build
+# 3. Populate Frontend Build
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
-# 6. Configure Services
+# 4. Configure Services
 COPY supervisord.conf /etc/supervisord.conf
 COPY frontend/nginx.hf.conf /etc/nginx/http.d/default.conf
 
-# 7. Huging Face Permissions (Run as UID 1000)
-# We must ensure all runtime directories are writable by user 1000
+# 5. Hugging Face Permissions (Run as UID 1000)
 RUN mkdir -p /var/lib/nginx /var/log/nginx /run/nginx /tmp/supervisor /app/shared && \
     chown -R 1000:1000 /app /usr/share/nginx/html /var/lib/nginx /var/log/nginx /run/nginx /tmp
 
