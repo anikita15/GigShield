@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns');
 const { MONGO_URI } = require('./env');
+
+// Force IPv4 first for Alpine/musl SRV resolution
+dns.setDefaultResultOrder('ipv4first');
+
 let mongoServer;
 
 const connectDB = async () => {

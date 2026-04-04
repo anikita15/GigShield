@@ -14,8 +14,8 @@ RUN npm run build
 # STAGE 2: Final Monolith Container
 FROM node:20-alpine
 
-# Install system dependencies (Nginx, Supervisor)
-RUN apk add --no-cache nginx supervisor
+# Install system dependencies (Nginx, Supervisor, DNS Compat)
+RUN apk add --no-cache nginx supervisor libc6-compat gcompat
 
 WORKDIR /app
 
