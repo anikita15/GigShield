@@ -1,3 +1,12 @@
+---
+title: GigShield AI Demo
+emoji: 🛡️
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # 🛡️ GigShield AI 
 
 ### **Autonomous Parametric Income Protection for the Global Gig Economy**
