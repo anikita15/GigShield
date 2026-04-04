@@ -1,9 +1,10 @@
-const { exec } = require('child_process');
 const path = require('path');
+require('dns').setDefaultResultOrder('ipv4first');
 const RiskScore = require('../../shared/models/RiskScore');
 const FraudFlag = require('../../shared/models/FraudFlag');
 const Payout = require('../../shared/models/Payout');
 const User = require('../../shared/models/User');
+const ActivityLog = require('../../shared/models/ActivityLog');
 
 const evaluatorPath = path.resolve(__dirname, '../../shared/evaluator/evaluator.js');
 const { evaluate, buildIdempotencyKey } = require(evaluatorPath);

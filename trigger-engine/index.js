@@ -18,10 +18,10 @@ const { startScheduler } = require('./scheduler');
 
 async function start() {
   // 🔄 SYNC: Wait for Backend to initialize the in-memory DB (Audit Mode)
-  let MONGO_URI = process.env.MONGO_URI;
+  let MONGO_URI = process.env.MONGO_URI || '';
   const syncPath = path.join(__dirname, '../.env.local');
   
-  if (MONGO_URI.includes('localhost')) {
+  if (MONGO_URI && MONGO_URI.includes('localhost')) {
     console.log('[ENGINE] Audit mode detected. Waiting for Backend sync (5s)...');
     await new Promise(r => setTimeout(r, 5000));
     
