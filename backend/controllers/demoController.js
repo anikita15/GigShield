@@ -39,8 +39,9 @@ const getSystemStateSnapshot = async () => {
 exports.resetDemoState = async (req, res, next) => {
     try {
         const scriptPath = path.resolve(__dirname, '../seed_investor_demo.js');
-        exec(`node "${scriptPath}"`, { cwd: path.resolve(__dirname, '../') }, async (error, stdout, stderr) => {
+        exec(`node "${scriptPath}"`, { cwd: path.resolve(__dirname, '../'), env: { ...process.env } }, async (error, stdout, stderr) => {
             if (error) {
+                console.error("Seed script error:", stderr);
                 return next(error);
             }
             const defaultState = await getSystemStateSnapshot();

@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+require('dns').setDefaultResultOrder('ipv4first');
 
 const envPathLocal = path.join(__dirname, '../.env.local');
 const envPathCore = path.join(__dirname, '.env');
