@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+**/node_modules
+**/dist
+**/.env
+**/.env.local
+**/.git
+**/.pytest_cache
+**/__pycache__
+frontend/dist
+ml-service/.pytest_cache
+ml-service/__pycache__
+*.md
+.gitignore
+docker-compose.yml
+Dockerfile

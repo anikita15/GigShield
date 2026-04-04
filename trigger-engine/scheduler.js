@@ -7,7 +7,7 @@
  */
 
 const cron = require('node-cron');
-const { evaluate } = require('./evaluator');
+const { evaluate } = require('../shared/evaluator/evaluator');
 const { dispatchPayout } = require('./dispatcher');
 const { logTriggerEvent } = require('./auditLogger');
 

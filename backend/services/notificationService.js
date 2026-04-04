@@ -1,4 +1,4 @@
-const Notification = require('../models/Notification');
+const Notification = require('../../shared/models/Notification');
 const socketService = require('./socketService');
 
 /**

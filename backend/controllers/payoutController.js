@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const Payout = require('../models/Payout');
-const FraudFlag = require('../models/FraudFlag');
+const Payout = require('../../shared/models/Payout');
+const FraudFlag = require('../../shared/models/FraudFlag');
 
 /**
  * @desc   Initiate a new parametric payout (Trigger Engine / Admin)
@@ -117,7 +117,9 @@ exports.getPayoutById = async (req, res, next) => {
     }
 
     // Role Guard: Only admins or the owner can view this payout
-    if (req.user.role !== 'admin' && payout.userId._id.toString() !== req.user.id) {
+    const payoutOwnerId = payout.userId?._id?.toString() || payout.userId?.toString();
+    const requesterId = req.user._id?.toString() || req.user.id;
+    if (req.user.role !== 'admin' && payoutOwnerId !== requesterId) {
       const err = new Error('Not authorized to view this payout');
       err.statusCode = 403;
       throw err;
@@ -135,7 +137,7 @@ exports.getPayoutById = async (req, res, next) => {
  */
 exports.getMyPayouts = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
     const payouts = await Payout.find({ userId }).sort({ createdAt: -1 });
 
     res.json({ success: true, count: payouts.length, data: payouts });

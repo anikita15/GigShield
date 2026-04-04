@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { JWT_SECRET, INTERNAL_API_KEY } = require('../config/env');
+const User = require('../../shared/models/User');
+const { JWT_SECRET, INTERNAL_API_KEY, NODE_ENV } = require('../config/env');
+const TokenBlacklist = require('../../shared/models/TokenBlacklist');
 
 /**
  * Middleware to protect routes that require authentication.
@@ -18,7 +19,7 @@ const protect = async (req, res, next) => {
       return next(err);
     }
     // Mark request as system-level; set a synthetic user object
-    req.user = { id: 'system', role: 'admin', isSystem: true };
+    req.user = { _id: 'system', id: 'system', role: 'admin', isSystem: true };
     return next();
   }
 
@@ -31,6 +32,15 @@ const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
+
+      // Check if token has been blacklisted (logout)
+      const isBlacklisted = await TokenBlacklist.findOne({ token });
+      if (isBlacklisted) {
+        const err = new Error('Token has been revoked');
+        err.statusCode = 401;
+        return next(err);
+      }
+
       const decoded = jwt.verify(token, JWT_SECRET);
 
       req.user = await User.findById(decoded.id).select('-password');

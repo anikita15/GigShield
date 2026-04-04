@@ -1,6 +1,5 @@
 const axios = require('axios');
-
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+const { ML_SERVICE_URL } = require('../config/env');
 
 /**
  * Calls the external ML service to compute a risk score.
@@ -21,4 +20,3 @@ const getRiskScore = async (payload) => {
 };
 
 module.exports = { getRiskScore };
-

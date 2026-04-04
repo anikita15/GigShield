@@ -6,12 +6,12 @@
  * Uses jest + mocked mongoose models.
  */
 
-jest.mock('../models/User');
-jest.mock('../models/ActivityLog');
-jest.mock('../models/RiskScore');
-jest.mock('../models/Payout');
-jest.mock('../models/FraudFlag');
-jest.mock('../models/Notification');
+jest.mock('../../shared/models/User');
+jest.mock('../../shared/models/ActivityLog');
+jest.mock('../../shared/models/RiskScore');
+jest.mock('../../shared/models/Payout');
+jest.mock('../../shared/models/FraudFlag');
+jest.mock('../../shared/models/Notification');
 jest.mock('../services/mlService');
 jest.mock('../services/notificationService');
 jest.mock('../services/socketService', () => ({
@@ -48,7 +48,7 @@ const INVALID_ID = 'not-an-objectid';
 // ─────────────────────────────────────────────
 describe('authController', () => {
   const { register, requestOtp, verifyOtp } = require('../controllers/authController');
-  const User = require('../models/User');
+  const User = require('../../shared/models/User');
 
   beforeEach(() => { jest.clearAllMocks(); });
 
@@ -104,14 +104,14 @@ describe('authController', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404 }));
     });
 
-    it('generates OTP and returns 200 with demo_otp', async () => {
+    it('generates OTP and returns 200', async () => {
       const saveMock = jest.fn().mockResolvedValue(true);
       User.findOne.mockResolvedValueOnce({ _id: VALID_ID, phone: '123', otp: null, otpExpiresAt: null, save: saveMock });
       const req = mockReq({ body: { phone: '1234567890' } });
       const res = mockRes();
       await requestOtp(req, res, mockNext);
       expect(saveMock).toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ demo_otp: expect.any(String) }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
   });
 
@@ -140,10 +140,12 @@ describe('authController', () => {
     });
 
     it('returns JWT token on valid OTP', async () => {
+      const bcrypt = require('bcryptjs');
+      const hashedOtp = await bcrypt.hash('123456', 10);
       const saveMock = jest.fn().mockResolvedValue(true);
       User.findOne.mockResolvedValueOnce({
         _id: VALID_ID, name: 'A', phone: '123', email: 'a@b.com', role: 'worker',
-        otp: '123456', otpExpiresAt: new Date(Date.now() + 60000), save: saveMock
+        otp: hashedOtp, otpExpiresAt: new Date(Date.now() + 60000), save: saveMock
       });
       const req = mockReq({ body: { phone: '123', otp: '123456' } });
       const res = mockRes();
@@ -159,7 +161,7 @@ describe('authController', () => {
 // ─────────────────────────────────────────────
 describe('activityController', () => {
   const { createActivity, getUserActivities, bulkCreateActivity } = require('../controllers/activityController');
-  const ActivityLog = require('../models/ActivityLog');
+  const ActivityLog = require('../../shared/models/ActivityLog');
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -238,8 +240,8 @@ describe('activityController', () => {
 // ─────────────────────────────────────────────
 describe('payoutController', () => {
   const { initiatePayout, updatePayoutStatus, getMyPayouts } = require('../controllers/payoutController');
-  const Payout = require('../models/Payout');
-  const FraudFlag = require('../models/FraudFlag');
+  const Payout = require('../../shared/models/Payout');
+  const FraudFlag = require('../../shared/models/FraudFlag');
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -321,9 +323,9 @@ describe('payoutController', () => {
 // ─────────────────────────────────────────────
 describe('adminController', () => {
   const { getAllUsers, getFraudFlags, overrideRiskScore } = require('../controllers/adminController');
-  const User = require('../models/User');
-  const FraudFlag = require('../models/FraudFlag');
-  const RiskScore = require('../models/RiskScore');
+  const User = require('../../shared/models/User');
+  const FraudFlag = require('../../shared/models/FraudFlag');
+  const RiskScore = require('../../shared/models/RiskScore');
   const { sendNotification } = require('../services/notificationService');
 
   beforeEach(() => jest.clearAllMocks());
@@ -375,8 +377,8 @@ describe('adminController', () => {
 // ─────────────────────────────────────────────
 describe('riskController', () => {
   const { computeRiskScore } = require('../controllers/riskController');
-  const ActivityLog = require('../models/ActivityLog');
-  const RiskScore = require('../models/RiskScore');
+  const ActivityLog = require('../../shared/models/ActivityLog');
+  const RiskScore = require('../../shared/models/RiskScore');
   const { getRiskScore } = require('../services/mlService');
 
   beforeEach(() => jest.clearAllMocks());

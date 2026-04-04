@@ -1,6 +1,6 @@
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/env');
+const { JWT_SECRET, CORS_ORIGIN } = require('../config/env');
 
 let io;
 
@@ -11,7 +11,7 @@ module.exports = {
   init: (httpServer) => {
     io = socketIo(httpServer, {
       cors: {
-        origin: '*', // Adjust for production
+        origin: CORS_ORIGIN,
         methods: ['GET', 'POST'],
       },
     });

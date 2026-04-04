@@ -1,5 +1,7 @@
-const User = require('../models/User');
+const User = require('../../shared/models/User');
 const generateToken = require('../utils/generateToken');
+const bcrypt = require('bcryptjs');
+const { NODE_ENV } = require('../config/env');
 
 // Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -66,17 +68,19 @@ exports.requestOtp = async (req, res, next) => {
     }
 
     const otp = generateOTP();
-    user.otp = otp;
+    user.otp = await bcrypt.hash(otp, 10);
     user.otpExpiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes expiry
     await user.save();
 
-    // In a real app, send OTP via SMS here.
-    // For demo/simulated purposes, we return it in the response.
-    res.json({
+    // In production, send OTP via SMS. In dev, return it for testing.
+    const response = {
       success: true,
       message: 'OTP generated. Use this to verify.',
-      demo_otp: otp 
-    });
+    };
+    if (NODE_ENV === 'development') {
+      response.demo_otp = otp;
+    }
+    res.json(response);
   } catch (err) {
     next(err);
   }
@@ -103,14 +107,21 @@ exports.verifyOtp = async (req, res, next) => {
       throw err;
     }
 
-    if (!user.otp || user.otp !== otp) {
-      const err = new Error('Invalid OTP');
+    if (!user.otp || !user.otpExpiresAt) {
+      const err = new Error('No OTP was requested. Please request a new one.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Check expiry FIRST — prevents timing attack that leaks OTP correctness
+    if (new Date() > user.otpExpiresAt) {
+      const err = new Error('OTP expired. Please request a new one.');
       err.statusCode = 401;
       throw err;
     }
 
-    if (new Date() > user.otpExpiresAt) {
-      const err = new Error('OTP expired');
+    if (!(await bcrypt.compare(otp, user.otp))) {
+      const err = new Error('Invalid OTP');
       err.statusCode = 401;
       throw err;
     }
@@ -126,8 +137,45 @@ exports.verifyOtp = async (req, res, next) => {
       name: user.name,
       phone: user.phone,
       email: user.email,
+      isPremium: user.isPremium,
+      tier: user.tier,
       role: user.role,
+      weeklyPremium: user.weeklyPremium,
       token: generateToken(user._id),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc   Upgrade user to Premium (Sentinel)
+ * @route  POST /api/auth/subscribe
+ */
+exports.subscribe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const { weeklyPremium } = req.body;
+
+    user.isPremium = true;
+    user.tier = 'sentinel';
+    if (typeof weeklyPremium === 'number' && weeklyPremium > 0) {
+      user.weeklyPremium = weeklyPremium;
+    }
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Subscribed to Sentinel successfully',
+      isPremium: true,
+      tier: 'sentinel',
+      weeklyPremium: user.weeklyPremium,
     });
   } catch (err) {
     next(err);

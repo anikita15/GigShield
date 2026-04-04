@@ -1,33 +1,31 @@
-const User = require('../models/User');
-const FraudFlag = require('../models/FraudFlag');
-const RiskScore = require('../models/RiskScore');
+const mongoose = require('mongoose');
+const User = require('../../shared/models/User');
+const FraudFlag = require('../../shared/models/FraudFlag');
+const RiskScore = require('../../shared/models/RiskScore');
 const { sendNotification } = require('../services/notificationService');
 
 /**
  * @desc   Get all users (paginated)
  * @route  GET /api/admin/users
+ * @access Admin only
  */
 exports.getAllUsers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
 
     const total = await User.countDocuments();
     const users = await User.find()
-      .select('-password') // Ensure no sensitive data leak if password field is added later
+      .select('-otp -otpExpiresAt')
       .sort({ createdAt: -1 })
-      .skip(startIndex)
+      .skip(skip)
       .limit(limit);
 
     res.json({
       success: true,
       count: users.length,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { total, page, pages: Math.ceil(total / limit) },
       data: users,
     });
   } catch (err) {
@@ -36,76 +34,92 @@ exports.getAllUsers = async (req, res, next) => {
 };
 
 /**
- * @desc   Get all fraud flags with optional status filter
+ * @desc   Get all fraud flags (with optional status filter)
  * @route  GET /api/admin/fraud-flags
+ * @access Admin only
  */
 exports.getFraudFlags = async (req, res, next) => {
   try {
-    const { status } = req.query;
-    
-    // Build query object
-    const query = {};
-    if (status) query.status = status;
+    const filter = {};
+    if (req.query.status) {
+      const allowed = ['open', 'investigating', 'resolved', 'dismissed'];
+      if (!allowed.includes(req.query.status)) {
+        const err = new Error(`status must be one of: ${allowed.join(', ')}`);
+        err.statusCode = 400;
+        throw err;
+      }
+      filter.status = req.query.status;
+    }
 
-    const flags = await FraudFlag.find(query)
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const total = await FraudFlag.countDocuments(filter);
+    const flags = await FraudFlag.find(filter)
       .populate('userId', 'name email phone')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.json({ success: true, count: flags.length, data: flags });
+    res.json({
+      success: true,
+      count: flags.length,
+      pagination: { total, page, pages: Math.ceil(total / limit) },
+      data: flags,
+    });
   } catch (err) {
     next(err);
   }
 };
 
 /**
- * @desc   Manually override a user's risk score
- * @route  PATCH /api/admin/risk/:userId/override
+ * @desc   Admin override: manually set a user's risk score
+ * @route  POST /api/admin/risk-override/:userId
+ * @access Admin only
  */
 exports.overrideRiskScore = async (req, res, next) => {
   try {
     const { userId } = req.params;
     const { newScore, reason } = req.body;
 
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      const err = new Error('A valid ObjectId is required for userId');
+      const err = new Error('userId must be a valid ObjectId');
       err.statusCode = 400;
       throw err;
     }
 
-    if (newScore === undefined || typeof newScore !== 'number' || newScore < 0 || newScore > 100) {
-      const err = new Error('A valid newScore between 0 and 100 is required');
+    if (typeof newScore !== 'number' || newScore < 0 || newScore > 1) {
+      const err = new Error('newScore must be a decimal between 0 and 1 (e.g. 0.75)');
       err.statusCode = 400;
       throw err;
     }
 
-    if (!reason || typeof reason !== 'string') {
-      const err = new Error('A reason string is required for an audit log');
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      const err = new Error('reason is required');
       err.statusCode = 400;
       throw err;
     }
 
-    // Insert a new record to the risk score history to document the admin override
-    const updatedRisk = await RiskScore.create({
+    const riskRecord = await RiskScore.create({
       userId,
       score: newScore,
       factors: {
-        override: true,
-        reason,
-        adminId: req.user.id, 
-        timestamp: new Date().toISOString()
-      }
+        source: 'admin_override',
+        reason: reason.trim(),
+        adminId: req.user._id || req.user.id,
+      },
     });
 
-    // Notify the user about the risk score adjustment
+    // Notify the user about the score change
     await sendNotification(
       userId,
-      'Risk Score Adjusted',
-      `Your platform trust score has been manually reviewed and adjusted.`,
+      'Risk Score Updated',
+      `Your risk score has been updated to ${newScore} by an administrator. Reason: ${reason.trim()}`,
       'system'
     );
 
-    res.json({ success: true, data: updatedRisk });
+    res.json({ success: true, data: riskRecord });
   } catch (err) {
     next(err);
   }

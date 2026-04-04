@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────
+# GigShield AI — Cloud Infrastructure Blueprint
+# ─────────────────────────────────────────────
+services:
+  # 💾 Database Tier — Persisted Private Service
+  - type: private
+    name: mongodb
+    runtime: docker
+    dockerfile: mongo.Dockerfile
+    region: singapore
+    plan: starter
+    numInstances: 1
+    disk:
+      name: mongodb-data
+      mountPath: /data/db
+      sizeGB: 1
+
+  # ⚙️ ML Risk Service — Internal FastAPI Worker
+  - type: private
+    name: ml-service
+    runtime: docker
+    dockerfile: ml-service/Dockerfile
+    context: .
+    region: singapore
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: NODE_ENV
+        value: production
+
+  # 🛠️ Backend API — Core Logic & Socket Service
+  - type: private
+    name: backend
+    runtime: docker
+    dockerfile: backend/Dockerfile
+    context: .
+    region: singapore
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: MONGO_URI
+        value: mongodb://mongodb:27017/gigshield
+      - key: ML_SERVICE_URL
+        value: http://ml-service:8000
+      - key: INTERNAL_API_KEY
+        value: gigshield-internal-demo-key
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  # 🤖 Autonomous Worker — Cron Trigger Engine
+  - type: worker
+    name: trigger-engine
+    runtime: docker
+    dockerfile: trigger-engine/Dockerfile
+    context: .
+    region: singapore
+    plan: starter
+    envVars:
+      - key: MONGO_URI
+        value: mongodb://mongodb:27017/gigshield
+      - key: BACKEND_URL
+        value: http://backend:3000
+      - key: INTERNAL_API_KEY
+        value: gigshield-internal-demo-key
+      - key: NODE_ENV
+        value: production
+
+  # 🌐 Frontend Edge — Public Gateway & Nginx Proxy
+  - type: web
+    name: gigshield-frontend
+    runtime: docker
+    dockerfile: frontend/Dockerfile
+    context: .
+    region: singapore
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 80

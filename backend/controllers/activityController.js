@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const ActivityLog = require('../models/ActivityLog');
+const ActivityLog = require('../../shared/models/ActivityLog');
 
 /**
  * @desc   Create a new activity log

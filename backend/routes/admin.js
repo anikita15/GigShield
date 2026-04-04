@@ -8,8 +8,9 @@ const {
   overrideRiskScore,
 } = require('../controllers/adminController');
 
-// All admin routes are strictly protected and only for 'admin' role
-router.use(protect, checkRole('admin'));
+// All admin routes require authentication + admin role
+router.use(protect);
+router.use(checkRole('admin'));
 
 // GET /api/admin/users
 router.get('/users', getAllUsers);
@@ -17,7 +18,7 @@ router.get('/users', getAllUsers);
 // GET /api/admin/fraud-flags
 router.get('/fraud-flags', getFraudFlags);
 
-// PATCH /api/admin/risk/:userId/override
-router.patch('/risk/:userId/override', overrideRiskScore);
+// POST /api/admin/risk-override/:userId
+router.post('/risk-override/:userId', overrideRiskScore);
 
 module.exports = router;

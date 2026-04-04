@@ -13,10 +13,10 @@
  */
 
 const mongoose = require('mongoose');
-const RiskScore = require('../backend/models/RiskScore');
-const FraudFlag = require('../backend/models/FraudFlag');
-const Payout = require('../backend/models/Payout');
-const User = require('../backend/models/User');
+const RiskScore = require('../models/RiskScore');
+const FraudFlag = require('../models/FraudFlag');
+const Payout = require('../models/Payout');
+const User = require('../models/User');
 
 const THRESHOLD = parseFloat(process.env.RISK_PAYOUT_THRESHOLD) || 0.5;
 const COOLDOWN_MS = parseInt(process.env.PAYOUT_COOLDOWN_MS) || 86400000; // 24h

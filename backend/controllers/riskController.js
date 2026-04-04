@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const ActivityLog = require('../models/ActivityLog');
-const RiskScore = require('../models/RiskScore');
+const ActivityLog = require('../../shared/models/ActivityLog');
+const RiskScore = require('../../shared/models/RiskScore');
 const { getRiskScore } = require('../services/mlService');
 
 /**
@@ -66,6 +66,34 @@ exports.computeRiskScore = async (req, res, next) => {
 
     // 5. Return response
     res.json({ success: true, risk_score: riskRecord.score });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc   Get the latest risk score for a user
+ * @route  GET /api/risk/latest/:userId
+ */
+exports.getLatestRiskScore = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      const err = new Error('userId must be a valid ObjectId');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const latestRisk = await RiskScore.findOne({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!latestRisk) {
+      return res.json({ success: true, risk_score: 0 }); // Default for new users
+    }
+
+    res.json({ success: true, risk_score: latestRisk.score });
   } catch (err) {
     next(err);
   }
