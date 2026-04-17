@@ -30,7 +30,8 @@ const getSystemStateSnapshot = async () => {
             riskScore: risk ? risk.score : 0,
             hasFraud: fraud && fraud.status === 'open',
             fraudReason: fraud ? fraud.reason : null,
-            payoutStatus: payout ? payout.status : 'none'
+            payoutStatus: payout ? payout.status : 'none',
+            transactionId: payout ? payout.transactionId : null
         };
     }
     return snapshot;
@@ -77,10 +78,22 @@ const DEMO_USERS = [
     _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000004"),
     name: "Fraudulent Actor",
     email: "fraud@gigshield.ai",
-    phone: "+919876543204",
+    phone: "9876543204",
     trustScore: 0.10,
     isPremium: true, tier: 'sentinel',
     type: "fraud",
+    otp: "123456",
+    otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+  },
+  {
+    _id: new mongoose.Types.ObjectId("6605a2e5c1d2e3f4a0000005"),
+    name: "Admin Commander",
+    email: "admin@gigshield.ai",
+    phone: "0000000000",
+    role: "admin",
+    trustScore: 1.0,
+    isPremium: true, tier: 'sentinel',
+    type: "legit",
     otp: "123456",
     otpExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
   }
@@ -119,10 +132,8 @@ const seed = async () => {
                     });
                 }
             } else if (type === 'fraud') {
-                // Fraud impossible movement logs
+                // Fraud starts with clean slate, we will simulate the impossible movement later
                 await ActivityLog.create({ userId: uData._id, location: { lat: 28.7041, lng: 77.1025 }, deliveriesCompleted: 1, timestamp: new Date(now.getTime() - 600000) });
-                await ActivityLog.create({ userId: uData._id, location: { lat: 19.0760, lng: 72.8777 }, deliveriesCompleted: 1, timestamp: new Date(now.getTime() - 300000) });
-                await FraudFlag.create({ userId: uData._id, score: 0.99, reason: "Impossible telemetry detected (>500mph Delhi to Mumbai)", status: "open" });
             }
 
             // Initial Risk Baseline
@@ -145,6 +156,49 @@ exports.resetDemoState = async (req, res, next) => {
     } catch (err) {
         console.error("Reset demo failed:", err);
         res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// 1.2 Get Current Demo State (Non-destructive)
+exports.getDemoState = async (req, res, next) => {
+    try {
+        const state = await getSystemStateSnapshot();
+        res.json({ success: true, state });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+}
+
+// 1.5 Simulate Fraud Live Activity
+exports.simulateFraud = async (req, res, next) => {
+    try {
+        const fraudUserId = "6605a2e5c1d2e3f4a0000004";
+        const { detectImpossibleTravel } = require('../services/fraudDetectionService');
+        
+        const now = new Date();
+        const previousData = {
+            location: { lat: 28.7041, lng: 77.1025 }, // Delhi (seeded previously)
+            timestamp: new Date(now.getTime() - (5 * 60000)) // 5 minutes ago
+        };
+        const currentData = {
+            location: { lat: 19.0760, lng: 72.8777 }, // Mumbai
+            timestamp: now
+        };
+
+        // Trigger the central fraud service natively
+        await detectImpossibleTravel(fraudUserId, currentData, previousData);
+        
+        await ActivityLog.create({ 
+            userId: fraudUserId, 
+            location: currentData.location, 
+            deliveriesCompleted: 2, 
+            timestamp: currentData.timestamp 
+        });
+
+        const afterState = await getSystemStateSnapshot();
+        res.json({ success: true, message: "Fraud intercepted! Impossible live telemetry caught.", state: afterState });
+    } catch (err) {
+        next(err);
     }
 };
 
@@ -224,7 +278,17 @@ exports.fireEngine = async (req, res, next) => {
                });
                financialMetrics.totalPayouts += 500;
                if (!existingPayout) {
-                 await Payout.create({ userId: u._id, amount: 500, status: 'paid', triggerType: 'demo_auto', idempotencyKey: iKey });
+                 const { simulatePayout } = require('../services/paymentGateway');
+                 const gatewayRes = await simulatePayout(userId, 500, iKey);
+                 await Payout.create({ 
+                     userId: u._id, 
+                     amount: 500, 
+                     status: gatewayRes.status, 
+                     transactionId: gatewayRes.transactionId,
+                     reason: "Approved. Consistent delivery history and location telemetry sync perfectly with external hazard markers.",
+                     triggerType: 'demo_auto', 
+                     idempotencyKey: iKey 
+                 });
                }
            } else {
                // Determine WHY it failed for Explainability Layer

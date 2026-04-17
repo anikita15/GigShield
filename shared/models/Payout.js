@@ -10,6 +10,8 @@ const PayoutSchema = new mongoose.Schema({
   },
   triggerType: { type: String },
   idempotencyKey: { type: String, unique: true, sparse: true },
+  transactionId: { type: String },
+  reason: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payout', PayoutSchema);

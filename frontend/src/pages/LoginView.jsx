@@ -115,9 +115,14 @@ const LoginView = () => {
         )}
       </div>
 
-      <p className="mt-8 text-slate-400 text-xs font-medium">
-        First time here? <NavLink to="/register" className="text-navy-900 font-bold underline">Create Profile</NavLink>
-      </p>
+      <div className="mt-8 text-center text-xs">
+        <p className="text-slate-400 font-medium">
+          First time here? <NavLink to="/register" className="text-navy-900 font-bold underline">Create Profile</NavLink>
+        </p>
+        <p className="mt-2 text-indigo-400/80 font-medium border border-indigo-500/20 bg-indigo-50/50 p-2 rounded-xl">
+          Demo Admin Access: Phone = <span className="font-bold">0000000000</span>
+        </p>
+      </div>
     </div>
   );
 };

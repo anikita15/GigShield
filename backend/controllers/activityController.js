@@ -37,6 +37,20 @@ exports.createActivity = async (req, res, next) => {
       }
     }
 
+    // Fraud Detection: Impossible Movement Tracking
+    const lastActivity = await ActivityLog.findOne({ userId }).sort({ timestamp: -1 });
+    const nowTimestamp = new Date();
+
+    if (lastActivity) {
+        const { detectImpossibleTravel } = require('../services/fraudDetectionService');
+        const currentData = { location, timestamp: nowTimestamp };
+        const previousData = { 
+            location: lastActivity.location, 
+            timestamp: new Date(lastActivity.timestamp || lastActivity.createdAt) 
+        };
+        await detectImpossibleTravel(userId, currentData, previousData);
+    }
+
     const activity = await ActivityLog.create({
       userId,
       location,
@@ -132,6 +146,36 @@ exports.bulkCreateActivity = async (req, res, next) => {
 
       return { userId, location, deliveriesCompleted, timestamp: validTimestamp };
     });
+
+    // Fraud Detection: Verify sequences across all users
+    const { detectImpossibleTravel } = require('../services/fraudDetectionService');
+    const userGroups = {};
+    for (const item of validatedActivities) {
+        const uid = item.userId.toString();
+        if (!userGroups[uid]) userGroups[uid] = [];
+        userGroups[uid].push(item);
+    }
+
+    for (const [uid, userActivities] of Object.entries(userGroups)) {
+        userActivities.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        
+        const lastActivity = await ActivityLog.findOne({ userId: uid }).sort({ timestamp: -1 });
+        let previousData = null;
+        if (lastActivity) {
+            previousData = {
+                location: lastActivity.location,
+                timestamp: new Date(lastActivity.timestamp || lastActivity.createdAt)
+            };
+        }
+
+        for (const item of userActivities) {
+            const currentData = { location: item.location, timestamp: item.timestamp };
+            if (previousData) {
+                await detectImpossibleTravel(uid, currentData, previousData);
+            }
+            previousData = currentData;
+        }
+    }
 
     const inserted = await ActivityLog.insertMany(validatedActivities);
 

@@ -20,6 +20,20 @@ exports.register = async (req, res, next) => {
       throw err;
     }
 
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length !== 10) {
+      const err = new Error('Phone number must be exactly 10 digits.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      const err = new Error('Please provide a valid email address.');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const phoneExists = await User.findOne({ phone });
     if (phoneExists) {
       const err = new Error('User with this phone number already exists');
@@ -72,14 +86,12 @@ exports.requestOtp = async (req, res, next) => {
     user.otpExpiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes expiry
     await user.save();
 
-    // In production, send OTP via SMS. In dev, return it for testing.
+    // In production, send OTP via SMS. In demo, return it to the frontend for ease.
     const response = {
       success: true,
       message: 'OTP generated. Use this to verify.',
+      demo_otp: otp
     };
-    if (NODE_ENV === 'development') {
-      response.demo_otp = otp;
-    }
     res.json(response);
   } catch (err) {
     next(err);

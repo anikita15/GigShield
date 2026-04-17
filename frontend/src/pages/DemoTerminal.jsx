@@ -92,6 +92,15 @@ const DemoTerminal = () => {
             
             <button 
               disabled={loading}
+              onClick={() => executeCommand('/demo/simulate_fraud', 'INJECTING IMPOSSIBLE ACTIVITY TELEMETRY')}
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 transition border border-rose-500/20 disabled:opacity-50 text-rose-300"
+            >
+              <span className="text-xs font-bold uppercase">1b. Run Fraud Scenario</span>
+              <AlertTriangle size={14} />
+            </button>
+            
+            <button 
+              disabled={loading}
               onClick={() => executeCommand('/demo/simulate_crisis', 'SIMULATING HAZARD EVENT')}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-indigo-900/30 hover:bg-indigo-900/50 transition border border-indigo-500/20 disabled:opacity-50 text-indigo-300"
             >

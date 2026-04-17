@@ -11,6 +11,7 @@ import HistoryPage from '../pages/HistoryPage';
 import Profile from '../pages/Profile';
 import LandingPage from '../pages/LandingPage';
 import DemoTerminal from '../pages/DemoTerminal';
+import AdminDashboard from '../pages/AdminDashboard';
 
 const ProtectedLayout = () => {
   return (
@@ -39,6 +40,7 @@ const AppRouter = () => {
              <Route path="/payouts" element={<Payouts />} />
              <Route path="/history" element={<HistoryPage />} />
              <Route path="/profile" element={<Profile />} />
+             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" />} />

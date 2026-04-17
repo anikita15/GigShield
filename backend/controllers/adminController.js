@@ -4,6 +4,54 @@ const FraudFlag = require('../../shared/models/FraudFlag');
 const RiskScore = require('../../shared/models/RiskScore');
 const { sendNotification } = require('../services/notificationService');
 
+exports.getAllPayouts = async (req, res, next) => {
+  try {
+    const Payout = require('../../shared/models/Payout');
+    const payouts = await Payout.find().populate('userId', 'name email').sort({ createdAt: -1 }).limit(50);
+    res.json({ success: true, data: payouts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getDashboardStats = async (req, res, next) => {
+  try {
+    const Payout = require('../../shared/models/Payout');
+    const FraudFlag = require('../../shared/models/FraudFlag');
+
+    const totalPayouts = await Payout.countDocuments({ status: 'paid' });
+    const totalPayoutValueObj = await Payout.aggregate([{ $match: { status: 'paid' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]);
+    const totalPayoutValue = totalPayoutValueObj[0]?.total || 0;
+
+    const blockedPayouts = await FraudFlag.countDocuments({ status: { $in: ['open', 'investigating'] } });
+    const allUsersCount = await User.countDocuments();
+
+    // Logic: lossRatio is Paid Out / (Paid Out + Blocked Potential Loss)
+    const preventedPotentialLoss = blockedPayouts * 500;
+    const lossRatio = totalPayoutValue || preventedPotentialLoss 
+      ? ((totalPayoutValue / (totalPayoutValue + preventedPotentialLoss)) * 100).toFixed(1) + '%'
+      : '0%';
+
+    const fraudRate = allUsersCount ? ((blockedPayouts / allUsersCount) * 100).toFixed(1) : 0;
+    const todayProtected = totalPayoutValue + preventedPotentialLoss;
+
+    res.json({
+      success: true,
+      data: {
+        totalPayouts,
+        totalPayoutValue,
+        blockedPayouts,
+        fraudRate: `${fraudRate}%`,
+        lossRatio,
+        todayProtected
+      }
+    });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * @desc   Get all users (paginated)
  * @route  GET /api/admin/users

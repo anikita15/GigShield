@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Payout = require('../../shared/models/Payout');
 const FraudFlag = require('../../shared/models/FraudFlag');
+const { simulateGateway, simulatePayout } = require('../services/paymentGateway');
+const socketService = require('../services/socketService');
 
 /**
  * @desc   Initiate a new parametric payout (Trigger Engine / Admin)
@@ -47,13 +49,34 @@ exports.initiatePayout = async (req, res, next) => {
       }
     }
 
-    const payout = await Payout.create({
+    let payout = await Payout.create({
       userId,
       amount,
       triggerType: triggerType || 'manual',
       status: 'pending',
-      idempotencyKey
+      idempotencyKey,
+      reason: 'Risk automated execution check passed'
     });
+
+    // Simulated Gateway Call
+    const gatewayRes = await simulatePayout(userId.toString(), amount, idempotencyKey);
+    if (gatewayRes.success) {
+      payout.status = 'paid';
+      payout.transactionId = gatewayRes.transactionId;
+      await payout.save();
+
+      // Notify the user in real-time
+      try {
+        const io = socketService.getIO();
+        io.to(userId.toString()).emit('payout_triggered', {
+          amount: payout.amount,
+          transactionId: payout.transactionId,
+          reason: payout.reason || 'Risk automated execution check passed'
+        });
+      } catch (err) {
+        console.error("Socket emission failed:", err.message);
+      }
+    }
 
     res.status(201).json({ success: true, data: payout });
   } catch (err) {

@@ -6,11 +6,19 @@ const {
   getAllUsers,
   getFraudFlags,
   overrideRiskScore,
+  getDashboardStats,
+  getAllPayouts,
 } = require('../controllers/adminController');
 
 // All admin routes require authentication + admin role
 router.use(protect);
 router.use(checkRole('admin'));
+
+// GET /api/admin/stats
+router.get('/stats', getDashboardStats);
+
+// GET /api/admin/payouts
+router.get('/payouts', getAllPayouts);
 
 // GET /api/admin/users
 router.get('/users', getAllUsers);

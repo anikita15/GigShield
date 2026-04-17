@@ -29,6 +29,9 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=8000
+    volumes:
+      - ./ml-service:/app/ml-service
+      - ./shared:/app/shared
     depends_on:
       - mongodb
 
@@ -48,7 +51,11 @@ services:
       - JWT_SECRET=${JWT_SECRET:-gigshield-default-prod-secret-2024}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-gigshield-internal-demo-key}
       - ML_SERVICE_URL=http://ml-service:8000
-      - CORS_ORIGIN=http://localhost:80 # Points to Frontend (Nginx edge)
+      - CORS_ORIGIN=http://localhost:8080 # Points to Frontend (Nginx edge)
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - /app/node_modules # Prevents local node_modules from overwriting the container's
     depends_on:
       mongodb:
         condition: service_healthy
@@ -70,6 +77,10 @@ services:
       - RISK_PAYOUT_THRESHOLD=0.5
       - PAYOUT_COOLDOWN_MS=86400000
       - CRON_SCHEDULE=*/15 * * * *
+    volumes:
+      - ./trigger-engine:/app/trigger-engine
+      - ./shared:/app/shared
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy
@@ -82,7 +93,7 @@ services:
     container_name: gigshield-frontend
     restart: always
     ports:
-      - "80:80" # Standard HTTP Access Point
+      - "8080:80" # Standard HTTP Access Point
     depends_on:
       backend:
         condition: service_healthy
